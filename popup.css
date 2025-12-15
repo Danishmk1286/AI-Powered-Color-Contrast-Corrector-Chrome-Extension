@@ -1,0 +1,27 @@
+/* Purpose: Simple styling for readability in the popup */
+body {
+  font-family: system-ui, sans-serif;
+  width: 220px;
+  padding: 10px;
+}
+h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+button {
+  border: 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button {
+  background: #4a90e2;
+  color: white;
+}
+button:hover {
+  background: #357ab8;
+}
+#status {
+  margin-top: 8px;
+  font-size: 12px;
+}
