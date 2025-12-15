@@ -1,2 +1,2 @@
-# AI-Powered-Color-Contrast-Corrector-for-WCAG-Accessibility-a11y-
+# AI-Powered-Color-Contrast-Corrector-Google-Chrome-Extension-for-WCAG-Accessibility-a11y-
 AI ColorFix is an AI powered contrast corrector that fixes low contrast text on any website. One click on Scan detects and corrects WCAG accessibility issues in real time while preserving brand colors. It improves readability for everyone, runs fully on device, needs no setup, and lets you adjust contrast for comfort.
