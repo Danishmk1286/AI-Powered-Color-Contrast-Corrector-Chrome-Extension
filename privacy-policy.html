@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Privacy Policy | AI ColorFix</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.55;margin:0;background:#fff;color:#111}
+    main{max-width:860px;margin:0 auto;padding:28px 18px}
+    h1{font-size:28px;margin:0 0 10px}
+    h2{font-size:18px;margin:22px 0 8px}
+    p,li{font-size:15px}
+    .meta{color:#444;font-size:13px;margin:0 0 18px}
+    a{color:#0b57d0}
+    code{background:#f3f3f3;padding:2px 5px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="meta">
+      Product: AI ColorFix<br />
+      Effective date: <span id="effectiveDate"></span>
+    </p>
+
+    <p>
+      AI ColorFix is a browser extension that scans web pages for low contrast text and applies on page color adjustments to improve readability and support WCAG contrast goals.
+      This policy explains what data the extension uses and how it is handled.
+    </p>
+
+    <h2>Summary</h2>
+    <ul>
+      <li>The extension runs on your device.</li>
+      <li>It does not sell your data.</li>
+      <li>It does not use ads or trackers.</li>
+      <li>Any settings you choose can be saved locally in your browser.</li>
+    </ul>
+
+    <h2>Data we collect</h2>
+    <p>
+      AI ColorFix does not collect personal information such as your name, email, address, or payment details.
+      The extension does not send your browsing history or the content of pages you visit to our servers.
+    </p>
+
+    <h2>Data the extension processes</h2>
+    <p>
+      To detect and fix contrast issues, the extension reads visual style information on the current page, such as text color and background color.
+      It may also read the text element type and structure needed to apply safe styling changes.
+      This processing happens locally on your device.
+    </p>
+
+    <h2>Settings and personalization</h2>
+    <p>
+      If you choose a preferred contrast or comfort level, the extension may store these preferences locally using browser extension storage.
+      This data stays in your browser profile and is used only to apply your chosen settings.
+    </p>
+
+    <h2>Permissions</h2>
+    <p>
+      The extension may request permissions needed to scan and update page styles on the sites you use.
+      This access is used only to detect contrast issues and apply the fixes you request.
+    </p>
+
+    <h2>Third party services</h2>
+    <p>
+      AI ColorFix does not use third party analytics, advertising, or tracking SDKs.
+      If this changes in the future, we will update this policy before enabling such services.
+    </p>
+
+    <h2>Data sharing</h2>
+    <p>
+      We do not sell, rent, or share your personal data.
+      We only share information if required by law.
+    </p>
+
+    <h2>Security</h2>
+    <p>
+      We design the extension to minimize data use and keep processing on device.
+      No method of software security is perfect, but we aim to follow good engineering practices to reduce risk.
+    </p>
+
+    <h2>Children’s privacy</h2>
+    <p>
+      AI ColorFix is not designed to collect personal data from children.
+      If you believe a child has provided personal information to us, contact us and we will address it.
+    </p>
+
+    <h2>Changes to this policy</h2>
+    <p>
+      We may update this policy to reflect product changes or legal requirements.
+      We will change the effective date at the top when we do.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      If you have questions about this policy, contact:<br />
+      Email: <a href="mailto:danishmk1286@gmail.com">danishmk1286@gmail.com</a><br />
+      Repository: <a href="https://github.com/Danishmk1286/AI-Powered-Color-Contrast-Corrector-Chrome-Extension">Repo Link</a>
+    </p>
+  </main>
+
+  <script>
+    (function () {
+      var d = new Date();
+      var yyyy = d.getFullYear();
+      var mm = String(d.getMonth() + 1).padStart(2, "0");
+      var dd = String(d.getDate()).padStart(2, "0");
+      document.getElementById("effectiveDate").textContent = yyyy + "-" + mm + "-" + dd;
+    })();
+  </script>
+</body>
+</html>
