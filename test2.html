@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Contrast Fixer Test Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #fff;
+        margin: 0;
+        padding: 0;
+      }
+
+      section {
+        padding: 40px;
+      }
+
+      /* Section 1: Poor text contrast on solid backgrounds */
+      .low-contrast {
+        background-color: #fafafa;
+        color: #d3d3d3;
+        font-size: 20px;
+        padding: 20px;
+      }
+
+      /* Section 2: Text over image background */
+      /* Note: Extension will automatically detect image background and apply text shadow */
+      .image-bg {
+        background: url("https://picsum.photos/800/300?blur") center/cover;
+        color: #fff;
+        padding: 40px;
+        font-size: 22px;
+        position: relative;
+      }
+      
+      /* Manual solutions (commented out - extension handles this automatically):
+      
+      Solution 1: Text shadow for readability on varying backgrounds
+      .image-bg h2,
+      .image-bg p {
+        text-shadow: 
+          2px 2px 4px rgba(0, 0, 0, 0.8),
+          -1px -1px 2px rgba(0, 0, 0, 0.8),
+          0 0 8px rgba(0, 0, 0, 0.5);
+      }
+      
+      Solution 2: Semi-transparent overlay
+      Solution 3: Gradient overlay
+      Solution 4: Backdrop filter
+      */
+
+      /* Section 3: Transparent container */
+      .transparent-box {
+        background-color: rgba(0, 0, 0, 0.2);
+        color: #888;
+        font-size: 18px;
+        padding: 30px;
+      }
+
+      /* Section 4: Buttons with poor hover contrast */
+      .bad-button {
+        background-color: #0044cc;
+        color: #0044cc;
+        border: none;
+        padding: 15px 25px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      .bad-button:hover {
+        background-color: #0033aa;
+        color: #002288;
+      }
+
+      /* Section 5: Text inside gradient overlay */
+      .gradient-overlay {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.3),
+          rgba(0, 0, 0, 0.3)
+        );
+        color: #777;
+        padding: 40px;
+        font-size: 20px;
+      }
+
+      /* Section 6: Nested transparency layers */
+      .layered {
+        background-color: rgba(200, 200, 200, 0.6);
+        padding: 40px;
+      }
+
+      .layered-inner {
+        background-color: rgba(255, 255, 255, 0.4);
+        color: #aaa;
+        font-size: 20px;
+        padding: 30px;
+      }
+
+      /* Section 7: Links with poor contrast */
+      a {
+        color: #bbb;
+        text-decoration: none;
+        margin-right: 15px;
+      }
+
+      a:hover {
+        color: #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="low-contrast">
+      <h2>Section 1: Low Contrast Text</h2>
+      <p>This light gray text on a light gray background is hard to read.</p>
+    </section>
+
+    <section class="image-bg">
+      <h2>Section 2: Text Over Image</h2>
+      <p>
+        This text is placed directly over an image with no solid background
+        behind it.
+      </p>
+    </section>
+
+    <section class="transparent-box">
+      <h2>Section 3: Transparent Container</h2>
+      <p>Text over a semi-transparent box can reduce readability.</p>
+    </section>
+
+    <section>
+      <h2>Section 4: Poor Hover Contrast</h2>
+      <button class="bad-button">Hover Me</button>
+    </section>
+
+    <section class="gradient-overlay">
+      <h2>Section 5: Gradient Overlay</h2>
+      <p>
+        This area uses a semi-transparent gradient that will confuse flat
+        contrast calculations.
+      </p>
+    </section>
+
+    <section class="layered">
+      <div class="layered-inner">
+        <h2>Section 6: Nested Transparency</h2>
+        <p>
+          This layered structure simulates real-world composite backgrounds.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Section 7: Poor Link Contrast</h2>
+      <p>
+        <a href="#">Register</a>
+        <a href="#">Sign in</a>
+        <a href="#">Learn more</a>
+      </p>
+    </section>
+  </body>
+</html>

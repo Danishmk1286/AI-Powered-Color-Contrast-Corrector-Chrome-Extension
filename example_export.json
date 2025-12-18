@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "tool_version": "3.0",
+  "export_timestamp": "2024-01-15T10:30:45.123Z",
+  "metadata": {
+    "total_entries": 3,
+    "page_url": "https://example.com/test-page",
+    "exported_at": "2024-01-15T10:30:45.123Z"
+  },
+  "entries": [
+    {
+      "element_id": "h1_1705312245123_abc123_0",
+      "dom_path": "body > main > header > h1:nth-child(1)",
+      "tag_name": "h1",
+      "element_id_attr": "main-heading",
+      "class_list": "hero-title",
+      "text_preview": "Welcome to Our Website",
+      "foreground_color": "rgb(79, 79, 79)",
+      "background_color": "rgb(240, 240, 240)",
+      "foreground_rgb": [79, 79, 79],
+      "background_rgb": [240, 240, 240],
+      "background_rgba": [240, 240, 240, 1.0],
+      "contrast_ratio": 2.85,
+      "target_contrast": 4.5,
+      "meets_target": false,
+      "font_size": 32,
+      "font_weight": 700,
+      "line_height": 1.2,
+      "background_type": "gradient",
+      "action_taken": "color_changed",
+      "has_image_background": false,
+      "has_transparency": false,
+      "has_explicit_background": true,
+      "was_already_fixed": false,
+      "timestamp": "2024-01-15T10:30:45.100Z",
+      "page_url": "https://example.com/test-page",
+      "screenshot_id": "screenshot_h1_1705312245123_abc123_0_1705312245100",
+      "human_label": null,
+      "notes": null
+    },
+    {
+      "element_id": "p_1705312245124_def456_1",
+      "dom_path": "body > main > article > p:nth-child(2)",
+      "tag_name": "p",
+      "element_id_attr": null,
+      "class_list": "body-text",
+      "text_preview": "This is a paragraph with low contrast text that needs to be corrected...",
+      "foreground_color": "rgb(200, 200, 200)",
+      "background_color": "rgb(255, 255, 255)",
+      "foreground_rgb": [200, 200, 200],
+      "background_rgb": [255, 255, 255],
+      "background_rgba": [255, 255, 255, 1.0],
+      "contrast_ratio": 1.85,
+      "target_contrast": 4.5,
+      "meets_target": false,
+      "font_size": 16,
+      "font_weight": 400,
+      "line_height": "normal",
+      "background_type": "solid",
+      "action_taken": "color_changed",
+      "has_image_background": false,
+      "has_transparency": false,
+      "has_explicit_background": false,
+      "was_already_fixed": false,
+      "timestamp": "2024-01-15T10:30:45.101Z",
+      "page_url": "https://example.com/test-page",
+      "screenshot_id": null,
+      "human_label": null,
+      "notes": null
+    },
+    {
+      "element_id": "span_1705312245125_ghi789_2",
+      "dom_path": "body > main > article > div > span:nth-child(1)",
+      "tag_name": "span",
+      "element_id_attr": null,
+      "class_list": "highlight",
+      "text_preview": "Already meets contrast requirements",
+      "foreground_color": "rgb(0, 0, 0)",
+      "background_color": "rgb(255, 255, 255)",
+      "foreground_rgb": [0, 0, 0],
+      "background_rgb": [255, 255, 255],
+      "background_rgba": [255, 255, 255, 1.0],
+      "contrast_ratio": 21.0,
+      "target_contrast": 4.5,
+      "meets_target": true,
+      "font_size": 14,
+      "font_weight": "normal",
+      "line_height": 1.4,
+      "background_type": "solid",
+      "action_taken": "unchanged",
+      "has_image_background": false,
+      "has_transparency": false,
+      "has_explicit_background": false,
+      "was_already_fixed": false,
+      "timestamp": "2024-01-15T10:30:45.102Z",
+      "page_url": "https://example.com/test-page",
+      "screenshot_id": null,
+      "human_label": null,
+      "notes": null
+    }
+  ],
+  "screenshot_queue": [
+    {
+      "entry_index": 0,
+      "screenshot_id": "screenshot_h1_1705312245123_abc123_0_1705312245100",
+      "size": 224,
+      "timestamp": 1705312245100
+    }
+  ]
+}
+
+
+
+
+
+
+
+
