@@ -39,12 +39,14 @@ Follow these steps to install the extension manually:
 #### Step 1: Download the Extension
 
 **Option A: Clone the Repository**
+
 ```bash
 git clone https://github.com/Danishmk1286/AI-Powered-Color-Contrast-Corrector-Chrome-Extension.git
 cd AI-Powered-Color-Contrast-Corrector-Chrome-Extension
 ```
 
 **Option B: Download as ZIP**
+
 1. Click the green **"Code"** button on the GitHub repository page
 2. Select **"Download ZIP"**
 3. Extract the ZIP file to your desired location
@@ -82,16 +84,19 @@ cd AI-Powered-Color-Contrast-Corrector-Chrome-Extension
 ### Troubleshooting Installation
 
 **Extension not loading?**
+
 - Ensure you selected the root folder containing `manifest.json`
 - Check that Developer Mode is enabled
 - Verify all files are present (no missing files error in console)
 
 **Extension disabled automatically?**
+
 - Check Chrome's extension error page: `chrome://extensions/`
 - Look for error messages in red
 - Ensure you're using Chrome 88 or later
 
 **Can't find "Load unpacked" button?**
+
 - Make sure Developer Mode toggle is ON (blue)
 - Refresh the extensions page
 
@@ -148,9 +153,9 @@ AI ColorFix uses a **hybrid mathematical approach** combining advanced color sci
 
 #### 1. CIELAB Color Space Optimization
 
-- **Color Space Conversion**: Converts RGB colors to CIELAB (L*a*b*) color space for perceptually uniform adjustments
+- **Color Space Conversion**: Converts RGB colors to CIELAB (L*a*b\*) color space for perceptually uniform adjustments
 - **Delta E Minimization**: Uses Delta E (ΔE) calculation to find the closest color match
-- **Lightness Adjustment**: Preserves hue (a*) and chroma (b*) while adjusting lightness (L*) for optimal contrast
+- **Lightness Adjustment**: Preserves hue (a*) and chroma (b*) while adjusting lightness (L\*) for optimal contrast
 - **Perceptual Uniformity**: CIELAB ensures color changes appear uniform to human vision
 
 #### 2. WCAG Contrast Calculation
@@ -178,15 +183,16 @@ AI ColorFix uses a **hybrid mathematical approach** combining advanced color sci
 
 ### Why CIELAB?
 
-CIELAB (International Commission on Illumination L*a*b*) is the industry standard for perceptually uniform color spaces. Unlike RGB, CIELAB represents colors in a way that matches human vision:
+CIELAB (International Commission on Illumination L*a*b\*) is the industry standard for perceptually uniform color spaces. Unlike RGB, CIELAB represents colors in a way that matches human vision:
 
 - **L\***: Lightness (0 = black, 100 = white)
 - **a\***: Green-red axis (negative = green, positive = red)
 - **b\***: Blue-yellow axis (negative = blue, positive = yellow)
 
 **Benefits of CIELAB:**
+
 - Perceptually uniform: Equal distances in CIELAB space represent equal perceived color differences
-- Hue preservation: Adjusting only L* maintains the original color's appearance
+- Hue preservation: Adjusting only L\* maintains the original color's appearance
 - Industry standard: Used in professional color management and design software
 - Accurate color matching: Delta E provides a reliable measure of color difference
 
@@ -237,12 +243,14 @@ We welcome contributions from the community! However, please review the followin
 ### How to Contribute
 
 1. **Fork the Repository**
+
    ```bash
    git clone https://github.com/Danishmk1286/AI-Powered-Color-Contrast-Corrector-Chrome-Extension.git
    cd AI-Powered-Color-Contrast-Corrector-Chrome-Extension
    ```
 
 2. **Create a Feature Branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    # or for bug fixes
@@ -250,12 +258,14 @@ We welcome contributions from the community! However, please review the followin
    ```
 
 3. **Make Your Changes**
+
    - Follow existing code style and conventions
    - Add JSDoc comments for functions
    - Test thoroughly on multiple websites
    - Ensure no console errors
 
 4. **Test Your Changes**
+
    - Load the extension in Chrome developer mode
    - Test on various websites with different color schemes
    - Verify no performance degradation
@@ -263,10 +273,12 @@ We welcome contributions from the community! However, please review the followin
    - Test edge cases and error scenarios
 
 5. **Commit Your Changes**
+
    ```bash
    git add .
    git commit -m "Description of your changes"
    ```
+
    - Use clear, descriptive commit messages
    - Reference issue numbers if applicable
 
@@ -296,6 +308,7 @@ If you find a bug or have a suggestion:
 1. **Check Existing Issues**: Search [GitHub Issues](https://github.com/Danishmk1286/AI-Powered-Color-Contrast-Corrector-Chrome-Extension/issues) to see if it's already reported
 
 2. **Create a New Issue** with:
+
    - **Clear Title**: Descriptive summary of the issue
    - **Description**: Detailed explanation of the problem
    - **Steps to Reproduce**: Step-by-step instructions
@@ -335,4 +348,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for web accessibility**
 
-*Improving readability, one website at a time.*
+_Improving readability, one website at a time._
