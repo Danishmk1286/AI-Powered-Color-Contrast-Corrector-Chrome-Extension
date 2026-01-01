@@ -1,85 +1,90 @@
-# System Architecture - Actual Implementation
+# AI ColorFix: Actual System Architecture & Implementation
 
-## Overview
+This document details the actual system architecture as implemented in the codebase. It maps the visual design to the functional logic, highlighting the relationship between the browser environment, the ML engine, and the CIELAB optimization module.
 
-This document presents the actual system architecture as implemented in the codebase, based on code analysis.
+---
 
-## Architecture Diagram - Visual Layout
+## 1. High-Level Architecture Overview
 
-This diagram matches the visual structure and style of the original design:
+The following diagram represents the structural layout of the system components and their primary interaction paths.
 
 ```mermaid
 flowchart TB
-    subgraph Client["Client-side Browser Environment"]
+    %% Global Settings
+    direction TB
+
+    subgraph Client["<b>CLIENT-SIDE BROWSER</b>"]
         direction LR
-        DOM["Web Page DOM"]
-        MO["Mutation Observer"]
-        SI1["Style Injector"]
+        DOM(["<b>Web Page DOM</b>"])
+        MO[["<b>Mutation Observer</b>"]]
+        SI1["<b>Style Injector</b>"]
     end
     
-    subgraph ML["Machine Learning Engine"]
-        direction LR
-        FE["Feature Extraction"]
-        RF["Readability Predictor<br/>(Random Forest)"]
-        LD["Legibility Score Decision"]
+    subgraph ML["<b>ML ENGINE (Veto Logic)</b>"]
+        direction TB
+        FE["<b>Feature Extraction</b>"]
+        RF{"<b>Readability Predictor<br/>(Random Forest)</b>"}
+        LD["<b>Legibility Score Decision</b>"]
+        
+        FE --> RF --> LD
     end
     
-    subgraph OPT["Optimization Module"]
-        direction LR
-        ICS["Inverse Contrast Search"]
-        CS["Constraints Solver<br/>(CIELAB)"]
-        PDC["Perceptual Distance Check"]
+    subgraph OPT["<b>OPTIMIZATION MODULE</b>"]
+        direction TB
+        ICS["<b>Inverse Contrast Search</b>"]
+        CS["<b>Constraints Solver</b>"]
+        PDC["<b>Perceptual Distance Check</b>"]
+        
+        ICS --> CS --> PDC
     end
+
+    %% External Nodes
+    NC(("<b>New<br/>Color</b>"))
+    WPDU["<b>DOM Update</b>"]
+    SI2["<b>Post-Update<br/>Injector</b>"]
+
+    %% --- CONNECTORS WITH READABLE LABELS ---
     
-    NC["New colour"]
-    WPDU["Web Page DOM update"]
-    SI2["Style Injector"]
+    %% We use HTML-like formatting for labels to ensure they are black on a light background for readability
+    DOM ====>|<b>1. <font color='black'>Extract Color Specs</font></b>| ICS
+    DOM ====>|<b>2. <font color='black'>Extract Element Data</font></b>| FE
     
-    %% Primary flow: DOM to Optimization
-    DOM -->|Element Data| ICS
+    PDC ===> NC
+    NC ===> WPDU
+    WPDU ===> SI2
     
-    %% Optimization Module internal flow
-    ICS --> CS
-    CS --> PDC
-    PDC --> NC
+    SI2 -.->|<b>3. <font color='black'>Re-Evaluate</font></b>| LD
+    LD ====>|<b>4. <font color='black'>Approve/Reject</font></b>| SI1
     
-    %% Optimization output flow
-    NC --> WPDU
-    WPDU --> PDC
+    SI1 ===> DOM
+    MO -.->|<b><font color='black'>Watch for Changes</font></b>| DOM
+
+    %% --- STYLING ---
     
-    %% ML Engine flow
-    DOM -->|Element Data| FE
-    FE --> RF
-    RF --> LD
+    %% Retaining requested arrow color #0018F9
+    linkStyle default stroke:#0018F9,stroke-width:4px,color:black
+
+    %% Subgraph Styles
+    style Client fill:#ffffff,stroke:#333,stroke-width:3px,color:#000
+    style ML fill:#fffdeb,stroke:#856404,stroke-width:3px,color:#000
+    style OPT fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000
     
-    %% Style Injector to ML
-    SI2 --> LD
+    %% Node Styles
+    style DOM fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px,color:#000
+    style MO fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style SI1 fill:#bbdefb,stroke:#0d47a1,stroke-width:2px,color:#000
+    style SI2 fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#000
     
-    %% ML Decision to Style Injector
-    LD --> SI1
+    %% Component Styles
+    style FE fill:#ffffff,stroke:#000,stroke-width:1px,color:#000
+    style RF fill:#ffffff,stroke:#000,stroke-width:1px,color:#000
+    style LD fill:#ffffff,stroke:#000,stroke-width:1px,color:#000
+    style ICS fill:#ffffff,stroke:#000,stroke-width:1px,color:#000
+    style CS fill:#ffffff,stroke:#000,stroke-width:1px,color:#000
+    style PDC fill:#ffffff,stroke:#000,stroke-width:1px,color:#000
     
-    %% Style Injector to DOM
-    SI1 --> DOM
-    
-    %% Mutation Observer
-    MO -.->|Monitors| DOM
-    
-    %% Styling to match original diagram
-    style Client fill:#ffffff,stroke:#000000,stroke-width:3px
-    style ML fill:#ffffff,stroke:#000000,stroke-width:3px
-    style OPT fill:#ffffff,stroke:#000000,stroke-width:3px
-    style DOM fill:#ffcdd2,stroke:#000000,stroke-width:2px
-    style MO fill:#ce93d8,stroke:#000000,stroke-width:2px
-    style SI1 fill:#90caf9,stroke:#000000,stroke-width:2px
-    style SI2 fill:#a5d6a7,stroke:#000000,stroke-width:2px
-    style FE fill:#90caf9,stroke:#000000,stroke-width:2px
-    style RF fill:#c5e1a5,stroke:#000000,stroke-width:2px
-    style LD fill:#90caf9,stroke:#000000,stroke-width:2px
-    style ICS fill:#90caf9,stroke:#000000,stroke-width:2px
-    style CS fill:#ce93d8,stroke:#000000,stroke-width:2px
-    style PDC fill:#90caf9,stroke:#000000,stroke-width:2px
-    style NC fill:#ffb74d,stroke:#000000,stroke-width:2px
-    style WPDU fill:#a5d6a7,stroke:#000000,stroke-width:2px
+    style NC fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:#000
+    style WPDU fill:#ffffff,stroke:#1b5e20,stroke-width:2px,color:#000
 ```
 
 **Note on Actual Implementation Flow:**
@@ -160,6 +165,7 @@ flowchart TD
     style SkipCheck fill:#ffebee
     style MLDecision fill:#fff4e1
 ```
+
 
 ## Component Details
 
