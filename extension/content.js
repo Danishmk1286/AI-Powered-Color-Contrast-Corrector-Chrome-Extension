@@ -1207,8 +1207,192 @@
         }
       } catch (_) {}
     }
-    
+
     return null;
+  }
+
+  /**
+   * Approximate CSS specificity as a single comparable integer
+   * (ids * 1e6 + classes/attrs/pseudo-classes * 1e3 + type selectors).
+   * Good enough to rank competing :visited rules the way the cascade would -
+   * we don't need exact spec compliance, just "more specific wins,
+   * later-in-source wins ties", which is what real stylesheets rely on.
+   */
+  function _cssSpecificity(selector) {
+    const s = selector.replace(/::[\w-]+/g, ''); // drop pseudo-elements (don't add specificity here)
+    const ids = (s.match(/#[\w-]+/g) || []).length;
+    const classesEtc = (s.match(/\.[\w-]+|\[[^\]]*\]|:[a-zA-Z-]+/g) || []).length;
+    const types = (s.match(/(^|[\s>+~,])\s*[a-zA-Z][\w-]*/g) || []).length;
+    return ids * 1000000 + classesEtc * 1000 + types;
+  }
+
+  /**
+   * Cached, flattened list of every stylesheet selector-branch that declares
+   * ":visited", one entry per comma-separated branch (with its specificity and
+   * source order precomputed), rebuilt only when the stylesheet count changes.
+   * Building this is the expensive part (walks every CSS rule on the page);
+   * querying it per-element afterwards is cheap, since real pages only ever
+   * have a handful of :visited rules out of possibly thousands total.
+   */
+  let _visitedRuleIndex = null;
+  let _visitedRuleIndexSheetCount = -1;
+
+  function _getVisitedRuleIndex() {
+    const sheets = document.styleSheets;
+    if (_visitedRuleIndex && _visitedRuleIndexSheetCount === sheets.length) {
+      return _visitedRuleIndex;
+    }
+
+    const index = [];
+    let order = 0;
+    for (const sheet of Array.from(sheets)) {
+      try { // cross-origin sheets may throw
+        const rules = sheet.cssRules || sheet.rules;
+        for (const rule of rules) {
+          if (rule.type !== CSSRule.STYLE_RULE) continue;
+          if (!rule.selectorText || !rule.selectorText.includes(':visited')) continue;
+
+          // CRITICAL: el.matches('selector:visited') can NEVER return true -
+          // browsers always evaluate :visited as unvisited in selector-matching
+          // APIs too (not just getComputedStyle), to block history-sniffing.
+          // Confirmed empirically: matches(':visited') is false even for a link
+          // to the current page's own URL. So the only way to know whether this
+          // rule *would* apply once visited is to test the structural selector
+          // with the (unmatchable) ":visited" token stripped out - and only for
+          // the comma-branches that actually declared :visited in the first place.
+          const branches = rule.selectorText.split(',').map(s => s.trim()).filter(s => s.includes(':visited'));
+          for (const branch of branches) {
+            const baseSelector = branch.replace(/:visited/g, '').trim();
+            if (!baseSelector) continue;
+            index.push({
+              rule,
+              baseSelector,
+              specificity: _cssSpecificity(branch), // score the REAL branch (incl. :visited) - it does count toward specificity even though JS can't match on it
+              order: order++
+            });
+          }
+        }
+      } catch (_) {}
+    }
+
+    _visitedRuleIndex = index;
+    _visitedRuleIndexSheetCount = sheets.length;
+    return index;
+  }
+
+  /**
+   * Helper – find the *actual* CSSRule that would set :visited colour for `el`,
+   * picking the highest-specificity match (ties broken by later source order)
+   * so a generic "a:visited" rule doesn't shadow a more specific one, matching
+   * how the real cascade would resolve multiple applicable :visited rules.
+   * @param {HTMLElement} el - Element to check
+   * @returns {CSSRule|null} The CSS rule that matches the element's :visited, or null
+   */
+  function findVisitedRule(el) {
+    if (!el || !el.matches) return null;
+    const index = _getVisitedRuleIndex();
+    let best = null;
+    for (const entry of index) {
+      try {
+        if (!el.matches(entry.baseSelector)) continue;
+      } catch (_) { continue; } // invalid selector - ignore
+      if (!best || entry.specificity > best.specificity ||
+          (entry.specificity === best.specificity && entry.order > best.order)) {
+        best = entry;
+      }
+    }
+    return best ? best.rule : null;
+  }
+
+  /**
+   * Gets the CSS :visited color for an element by checking the cached rule index.
+   * @param {HTMLElement} el - Element to check
+   * @param {string} property - CSS property to get ('color')
+   * @returns {string|null} The visited color value or null if not found
+   */
+  function getCssVisitedColor(el, property) {
+    const rule = findVisitedRule(el);
+    if (!rule) return null;
+    const value = rule.style.getPropertyValue(property);
+    return (value && value.trim() && value !== 'inherit' && value !== 'initial') ? value.trim() : null;
+  }
+
+  // Rule-level cache: once we've overridden a given ":visited" selector+color
+  // combination, don't re-scan stylesheets or re-inject the override for every
+  // other <a> element that happens to match the same rule.
+  const _visitedRulesFixed = new Set();
+
+  /**
+   * Checks a link's declared :visited colour against its background and,
+   * if it fails the target ratio, injects a corrected override targeting
+   * the ":visited" selector itself (never the element directly, since we
+   * can't know/toggle whether this particular link has actually been visited).
+   * @param {HTMLElement} el - The <a> element to check
+   * @param {number[]} effectiveBgRGB - Effective background RGB at this element
+   * @param {number} effectiveTarget - Target WCAG contrast ratio
+   */
+  function fixVisitedLinkColor(el, effectiveBgRGB, effectiveTarget) {
+    try {
+      if (!el || el.tagName !== 'A') return;
+      if (el.hasAttribute('data-ai-visited-checked')) return; // already handled
+
+      const rule = findVisitedRule(el);
+      if (!rule) {
+        el.setAttribute('data-ai-visited-checked', 'true');
+        el.setAttribute('data-ai-visited-skip-reason', 'no-visited-rule');
+        return;
+      }
+
+      const declaredColor = getCssVisitedColor(el, 'color');
+      if (!declaredColor) {
+        el.setAttribute('data-ai-visited-checked', 'true');
+        el.setAttribute('data-ai-visited-skip-reason', 'no-visited-color-declared');
+        return;
+      }
+
+      const ruleKey = `${rule.selectorText}|${declaredColor}`;
+      if (_visitedRulesFixed.has(ruleKey)) {
+        el.setAttribute('data-ai-visited-checked', 'true');
+        return; // this exact rule was already corrected via another link
+      }
+
+      const visitedRGBA = parseCSSColorToRGBA(declaredColor, null);
+      if (!visitedRGBA) {
+        el.setAttribute('data-ai-visited-checked', 'true');
+        el.setAttribute('data-ai-visited-skip-reason', 'unparseable-visited-color');
+        return;
+      }
+      const visitedRGB = visitedRGBA.slice(0, 3);
+
+      const currentCr = wcagContrast(visitedRGB, effectiveBgRGB);
+      el.setAttribute('data-ai-visited-checked', 'true');
+      if (currentCr >= effectiveTarget) {
+        _visitedRulesFixed.add(ruleKey); // compliant already, nothing to inject
+        return;
+      }
+
+      const correctedRGB = _find_optimal_color_cielab(visitedRGB, effectiveBgRGB, effectiveTarget);
+      console.log(`   🔗 [VISITED] Correcting a:visited "${rule.selectorText}": RGB(${visitedRGB.join(',')}) [${currentCr.toFixed(2)}:1] -> RGB(${correctedRGB.join(',')})`);
+
+      // Duplicate ":visited" within each selector segment to win specificity
+      // over the page's own rule, without needing to toggle any JS class
+      // (unlike :hover, we can never observe/toggle :visited at runtime).
+      const strongerSelector = rule.selectorText
+        .split(',')
+        .map(s => {
+          const trimmed = s.trim();
+          return trimmed.includes(':visited')
+            ? trimmed.replace(':visited', ':visited:visited')
+            : `${trimmed}:visited`;
+        })
+        .join(', ');
+
+      const css = `${strongerSelector} {\n  color: rgb(${correctedRGB.join(',')}) !important;\n}`;
+      injectStylesheet(css);
+      _visitedRulesFixed.add(ruleKey);
+    } catch (e) {
+      console.warn(`   ⚠️  [VISITED] Failed to check/fix visited link color: ${e.message}`);
+    }
   }
 
   /**
@@ -7822,7 +8006,7 @@ if (videoBehind) {
 
     const effectiveBg = bgInfo.effectiveBg;
     const hasImageBackground = bgInfo.hasImageBackground === true;
-    
+
     // Helper to clean up any existing AI styles when skipping
     function cleanupAIStyles(element) {
       if (!element || !element.style) return;
@@ -7838,6 +8022,22 @@ if (videoBehind) {
         'data-original-contrast', 'data-new-contrast', 'data-fix-type'
       ];
       attrsToRemove.forEach(attr => element.removeAttribute(attr));
+    }
+
+    // HARD FILTER RULE (disabled controls): A disabled/aria-disabled control's low
+    // contrast is frequently an intentional design signal ("this is unavailable"),
+    // not an accessibility bug - never force-fix it. Also covers descendants of a
+    // <fieldset disabled>, which disables all its form controls implicitly.
+    const isDisabledControl =
+      el.disabled === true ||
+      el.getAttribute('aria-disabled') === 'true' ||
+      (typeof el.closest === 'function' && !!el.closest('fieldset[disabled]'));
+    if (isDisabledControl) {
+      if (el.getAttribute) {
+        el.setAttribute('data-ai-skip-reason', 'disabled');
+        cleanupAIStyles(el);
+      }
+      return true;
     }
 
     // HARD FILTER RULE A: Skip if effective background contains an image
@@ -8744,11 +8944,17 @@ if (videoBehind) {
                   parent = parent.parentElement;
                 }
               }
+              // Independently check/fix this link's declared :visited colour (once per element).
+              // This never depends on whether the link is *actually* visited - the browser
+              // hides that from JS - so we correct the stylesheet rule itself, not the element.
+              if (isLink) {
+                fixVisitedLinkColor(el, effectiveBgRGB, effectiveTarget);
+              }
               // Determine if element is a button for optimal text color handling
-              const elIsButton = tagName === 'button' || 
+              const elIsButton = tagName === 'button' ||
                 el.getAttribute('role') === 'button' ||
                 (tagName === 'a' && (el.className || '').toLowerCase().includes('btn'));
-              
+
               const corrected = adjustColorToContrast(fg, effectiveBgRGB, effectiveTarget, {
                 aiSuggestedFg: aiSuggestedFg,
                 elementType: tagName,
@@ -9148,11 +9354,15 @@ if (videoBehind) {
                   parent = parent.parentElement;
                 }
               }
+              // Independently check/fix this link's declared :visited colour (once per element).
+              if (isLink2) {
+                fixVisitedLinkColor(el, effectiveBg, target);
+              }
               // Determine if element is a button for optimal text color handling
-              const elIsButton2 = tagName2 === 'button' || 
+              const elIsButton2 = tagName2 === 'button' ||
                 el.getAttribute('role') === 'button' ||
                 (tagName2 === 'a' && (el.className || '').toLowerCase().includes('btn'));
-              
+
               const corrected = adjustColorToContrast(fg, effectiveBg, target, {
                 aiSuggestedFg: aiSuggestedFg,
                 elementType: tagName2,
@@ -10013,6 +10223,25 @@ if (videoBehind) {
     }
   }
 
+  /**
+   * Priority distance from the current viewport: 0 if the element already
+   * intersects it, otherwise a magnitude that grows with distance above or
+   * below. Used to make scanning reach whatever the user is actually looking
+   * at first, instead of working strictly top-of-page-down regardless of
+   * scroll position (which is what made scans feel slow on long pages when
+   * the user had already scrolled, or scrolled while a scan was running).
+   */
+  function _viewportPriorityDistance(el) {
+    try {
+      const rect = el.getBoundingClientRect();
+      const viewBottom = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.bottom >= 0 && rect.top <= viewBottom) return 0; // intersects viewport now
+      return rect.top > viewBottom ? (rect.top - viewBottom) : -rect.bottom;
+    } catch (e) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+  }
+
   async function scanWithAI(comfortScale = null, autoCorrect = null) {
     // Get current settings from background worker
     const settings = await getCurrentSettings();
@@ -10133,6 +10362,12 @@ if (videoBehind) {
       const sectionsSorted = getSectionsSortedByZIndex();
       console.log(`   ✅ Found ${sectionsSorted.length} sections to process`);
 
+      // PERCEIVED-SPEED FIX: reorder by proximity to the CURRENT viewport rather
+      // than strict top-of-page order. If the user already scrolled down before
+      // clicking Scan, this makes what they're actually looking at get fixed
+      // first instead of waiting for everything above it to finish.
+      sectionsSorted.sort((a, b) => _viewportPriorityDistance(a) - _viewportPriorityDistance(b));
+
       // Calculate total elements to scan for progress tracking
       const sectionElementsCache = new Map();
       let totalElementsToScan = 0;
@@ -10156,9 +10391,27 @@ if (videoBehind) {
       scanProgress = { processed: 0, total: totalElementsToScan };
       updateScanProgress(0, totalElementsToScan);
 
-      // STEP 3: Process each section in STRICT VISUAL ORDER (top to bottom)
-      // DETERMINISTIC: Sections are sorted by Y-coordinate, ensuring header → body → footer order
+      // Track scrolling *during* this scan so the remaining (not-yet-processed)
+      // sections can re-target toward wherever the user scrolls to - gives a
+      // "keeps fixing as you scroll" feel instead of a one-shot priority snapshot
+      // taken only at scan start.
+      let _scanScrollDirty = false;
+      const _scanScrollHandler = () => { _scanScrollDirty = true; };
+      window.addEventListener('scroll', _scanScrollHandler, { passive: true });
+
+      // STEP 3: Process each section, prioritized toward what's currently on screen
+      // (falls back to strict visual top-to-bottom order for anything equally far away)
       for (let sectionIdx = 0; sectionIdx < sectionsSorted.length; sectionIdx++) {
+        // Re-prioritize the remaining queue if the user scrolled since we last checked
+        if (_scanScrollDirty) {
+          _scanScrollDirty = false;
+          const remaining = sectionsSorted.slice(sectionIdx);
+          remaining.sort((a, b) => _viewportPriorityDistance(a) - _viewportPriorityDistance(b));
+          for (let i = 0; i < remaining.length; i++) {
+            sectionsSorted[sectionIdx + i] = remaining[i];
+          }
+        }
+
         const section = sectionsSorted[sectionIdx];
 
         try {
@@ -10237,6 +10490,8 @@ if (videoBehind) {
         }
       }
 
+      window.removeEventListener('scroll', _scanScrollHandler);
+
       // Process any remaining elements that weren't in any section
       console.log("\n📋 STEP 6: Processing orphan elements not in any section...");
       // Use cached section elements to avoid redundant DOM queries
@@ -10285,9 +10540,14 @@ if (videoBehind) {
         return !elementsInSections.has(el);
       });
       
-      // DETERMINISTIC: Sort orphan elements by visual Y-position (top to bottom)
+      // Sort orphan elements by proximity to the current viewport first, falling
+      // back to strict visual Y/X/DOM order for elements at similar distance -
+      // same perceived-speed fix as the section priority reorder above.
       orphanElements.sort((a, b) => {
         try {
+          const distA = _viewportPriorityDistance(a);
+          const distB = _viewportPriorityDistance(b);
+          if (distA !== distB) return distA - distB;
           const rectA = a.getBoundingClientRect();
           const rectB = b.getBoundingClientRect();
           // Primary: Y-coordinate (top to bottom)
@@ -12859,6 +13119,23 @@ if (videoBehind) {
     });
   }
 
+  // Cheap "has anything relevant actually changed" signature for an element,
+  // used to skip re-running the CIELAB/contrast pipeline when a mutation touches
+  // the element but its rendered foreground/background/font are unchanged.
+  // Deliberately reads computed style rather than declared style, so it reflects
+  // whatever is actually rendered right now (including our own prior correction).
+  function computeContrastSignature(el, bgInfo) {
+    try {
+      const cs = window.getComputedStyle(el);
+      const bg = bgInfo && bgInfo.effectiveBg
+        ? `${bgInfo.effectiveBg.r},${bgInfo.effectiveBg.g},${bgInfo.effectiveBg.b},${bgInfo.effectiveBg.a}`
+        : (bgInfo ? `img:${!!bgInfo.hasImageBackground}` : 'none');
+      return `${cs.color}|${bg}|${cs.fontSize}|${cs.fontWeight}`;
+    } catch (e) {
+      return null; // if we can't compute it, caller should treat as "changed"
+    }
+  }
+
   // Helper function to clear all correction markers from an element
   // Used when background changes and element needs re-evaluation
   function _clearElementCorrections(el) {
@@ -13385,7 +13662,7 @@ if (videoBehind) {
                       subtree: true,
                       characterData: true,
                       attributes: true,
-                      attributeFilter: ['class', 'style']
+                      attributeFilter: ['class', 'style', 'disabled', 'aria-disabled']
                     });
                   }
                   isScanning = false;
@@ -13418,17 +13695,29 @@ if (videoBehind) {
         try {
           // Wait for animations to complete before applying fixes
           await waitForAnimations(el, 200);
-          
-          // Clear correction markers to allow re-processing
-          _clearElementCorrections(el);
-          
+
           // Get background info (fast - no full page analysis)
           const bgInfo = getEffectiveBackgroundInfo(el);
-          if (shouldSkipContrastFix(el, bgInfo)) {
-            scannedElements.add(el); // Mark as processed even if skipped
+
+          // SIGNATURE CACHE: if this element was already checked and its rendered
+          // foreground/background/font haven't changed since, the mutation that
+          // queued it was irrelevant to contrast - skip the clear + recompute entirely.
+          const sig = computeContrastSignature(el, bgInfo);
+          if (sig && el.getAttribute('data-ai-sig') === sig &&
+              (el.hasAttribute('data-ai-contrast-fixed') || el.hasAttribute('data-ai-skip-reason'))) {
+            scannedElements.add(el);
             continue;
           }
-          
+
+          // Clear correction markers to allow re-processing
+          _clearElementCorrections(el);
+
+          if (shouldSkipContrastFix(el, bgInfo)) {
+            scannedElements.add(el); // Mark as processed even if skipped
+            if (sig) el.setAttribute('data-ai-sig', sig);
+            continue;
+          }
+
           // Process element directly (fast - no full page scan overhead)
           await processElementForContrast(
             el,
@@ -13445,7 +13734,12 @@ if (videoBehind) {
           if (correctedColor) {
             await ensureFixPersists(el, 'color', correctedColor, 2); // Reduced to 2 retries
           }
-          
+
+          // Record the post-correction signature so an unrelated future mutation
+          // on this same element can skip straight past the cache check above.
+          const sigAfter = computeContrastSignature(el, bgInfo);
+          if (sigAfter) el.setAttribute('data-ai-sig', sigAfter);
+
           // DEBUG: Track processed elements
           if (window._aiDebugMutations && typeof debugStats !== 'undefined') {
             debugStats.processed++;
@@ -13536,7 +13830,40 @@ if (videoBehind) {
           // For non-corrected elements, skip style-only mutations
           continue;
         }
-        
+
+        // Handle disabled/aria-disabled attribute changes: a control's skip-eligible
+        // state can flip at runtime (e.g. a form becomes valid and its submit button
+        // stops being disabled) and needs to re-enter/leave the pipeline either way.
+        if (mutation.type === 'attributes' &&
+            (mutation.attributeName === 'disabled' || mutation.attributeName === 'aria-disabled')) {
+          const target = mutation.target;
+          if (target && target.nodeType === Node.ELEMENT_NODE && document.contains(target)) {
+            if (typeof scannedElements !== 'undefined' && scannedElements.delete) {
+              scannedElements.delete(target);
+            }
+            elementsToProcess.add(target);
+            hasRelevantChanges = true;
+
+            // A <fieldset disabled> toggle implicitly re-enables/disables every
+            // descendant control - re-check a bounded set of them too.
+            if (target.tagName === 'FIELDSET') {
+              const controls = target.querySelectorAll('button, a[href], input, select, textarea, [role="button"]');
+              for (let i = 0; i < controls.length && i < 100; i++) {
+                const ctrl = controls[i];
+                if (typeof scannedElements !== 'undefined' && scannedElements.delete) {
+                  scannedElements.delete(ctrl);
+                }
+                elementsToProcess.add(ctrl);
+              }
+            }
+
+            if (window._aiDebugMutations) {
+              debugStats.queued++;
+            }
+          }
+          continue;
+        }
+
         // Handle class attribute changes (e.g., tab active state changes)
         // When class changes, the effective background may change due to CSS rules
         if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
@@ -13962,7 +14289,7 @@ if (videoBehind) {
                           subtree: true,
                           characterData: true,
                           attributes: true,
-                          attributeFilter: ['class', 'style']
+                          attributeFilter: ['class', 'style', 'disabled', 'aria-disabled']
                         });
                       } catch (reconnectErr) {
                         console.error("   ⚠️ Failed to reconnect MutationObserver:", reconnectErr);
@@ -13982,10 +14309,10 @@ if (videoBehind) {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['class', 'style'] // Watch for class changes (tab states, active states) and style changes
+      attributeFilter: ['class', 'style', 'disabled', 'aria-disabled'] // Watch for class/style changes plus disabled toggles (buttons/fields can switch skip-state at runtime)
     });
-    
-    console.log("✅ MutationObserver enabled for dynamic content (including class/style attribute changes)");
+
+    console.log("✅ MutationObserver enabled for dynamic content (including class/style/disabled attribute changes)");
   }
 
   function stopObservingDynamicContent() {
@@ -14003,7 +14330,19 @@ if (videoBehind) {
   function resetAllChanges() {
     // Clear body background cache on reset (page may have changed)
     _cachedBodyBackground = null;
-    
+
+    // Clear the rule-level :visited cache and the per-link "already checked" flag.
+    // CRITICAL: a link whose visited colour already passed at the OLD target never
+    // gets data-ai-contrast-fixed (nothing needed correcting), so it's invisible to
+    // the data-ai-contrast-fixed cleanup loop below. Without this, changing the
+    // comfort-scale threshold and re-scanning would silently keep using the stale
+    // "already checked" result instead of re-testing against the new target.
+    _visitedRulesFixed.clear();
+    document.querySelectorAll("[data-ai-visited-checked]").forEach((el) => {
+      el.removeAttribute("data-ai-visited-checked");
+      el.removeAttribute("data-ai-visited-skip-reason");
+    });
+
     // Reset flagged elements (when auto-correct is disabled)
     document.querySelectorAll("[data-ai-contrast-flagged]").forEach((el) => {
       // Restore original outline if it was backed up
@@ -14154,6 +14493,9 @@ if (videoBehind) {
       el.removeAttribute("data-ai-effective-bg");
       el.removeAttribute("data-ai-contrast-flagged");
       el.removeAttribute("data-ai-contrast-ratio");
+      el.removeAttribute("data-ai-sig");
+      el.removeAttribute("data-ai-visited-checked");
+      el.removeAttribute("data-ai-visited-skip-reason");
 
       // Restore original outline if it was backed up
       if (el.hasAttribute("data-ai-original-outline")) {

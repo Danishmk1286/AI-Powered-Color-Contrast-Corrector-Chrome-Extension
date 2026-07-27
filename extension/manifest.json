@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Contrast Assistant",
+  "name": "AdaptiveUI",
   "version": "1.0",
   "description": "Automatically detects and fixes low-contrast text for better accessibility.",
   "permissions": ["activeTab", "scripting", "storage", "tabs"],

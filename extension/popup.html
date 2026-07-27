@@ -1,9 +1,9 @@
-<!-- Purpose: AI Contrast Assistant - Main Control Panel -->
+<!-- Purpose: AdaptiveUI - Main Control Panel -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>AI Contrast Assistant</title>
+    <title>AdaptiveUI</title>
     <style>
       :root {
         --bg: #f9fafb;
@@ -98,83 +98,7 @@
         opacity: 0.5;
         cursor: not-allowed;
       }
-      
-      /* Profile Selection Styles */
-      .profile-list {
-        display: grid;
-        gap: 8px;
-      }
-      
-      .profile-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px;
-        text-align: left;
-        background: var(--surface);
-        border: 2px solid var(--border);
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .profile-item:hover:not(:disabled) {
-        border-color: var(--brand);
-        background: #f0f7ff;
-      }
-      
-      .profile-item.active {
-        border-color: var(--brand);
-        background: #eff6ff;
-        cursor: pointer;
-      }
-      
-      .profile-item.inactive {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      
-      .profile-item.inactive:hover {
-        border-color: var(--border);
-        background: var(--surface);
-      }
-      
-      .profile-indicator {
-        font-size: 16px;
-        flex-shrink: 0;
-      }
-      
-      .profile-name {
-        flex: 1;
-        font-weight: 500;
-        color: var(--fg);
-      }
-      
-      .profile-status {
-        font-size: 11px;
-        color: var(--muted);
-        font-style: italic;
-      }
-      
-      /* View Transitions */
-      .view-hidden {
-        display: none !important;
-      }
-      
-      .view-visible {
-        display: block !important;
-        animation: fadeIn 0.3s ease;
-      }
-      
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-      
+
       /* Loading Overlay */
       .loading-overlay {
         position: fixed;
@@ -225,59 +149,10 @@
       <div class="loading-spinner"></div>
       <div class="loading-text">Scanning page for contrast...</div>
     </div>
-    <h2>🧠 AI Contrast Assistant</h2>
-
-    <!-- Profile Selection View -->
-    <div id="profileSelectionView" class="card stack" style="display: none;">
-      <div class="row">
-        <div class="section-title">Select Visual Condition Profile</div>
-        
-        <div class="profile-list">
-          <button class="profile-item active" data-profile="low_vision">
-            <span class="profile-indicator">🟢</span>
-            <span class="profile-name">Low Vision</span>
-            <span class="profile-status">(active profile)</span>
-          </button>
-          
-          <button class="profile-item inactive" data-profile="deuteranopia" disabled>
-            <span class="profile-indicator">⚪</span>
-            <span class="profile-name">Deuteranopia</span>
-            <span class="profile-status">(inactive)</span>
-          </button>
-          
-          <button class="profile-item inactive" data-profile="protanopia" disabled>
-            <span class="profile-indicator">⚪</span>
-            <span class="profile-name">Protanopia</span>
-            <span class="profile-status">(inactive)</span>
-          </button>
-          
-          <button class="profile-item inactive" data-profile="tritanopia" disabled>
-            <span class="profile-indicator">⚪</span>
-            <span class="profile-name">Tritanopia</span>
-            <span class="profile-status">(inactive)</span>
-          </button>
-          
-          <button class="profile-item inactive" data-profile="post_viral" disabled>
-            <span class="profile-indicator">⚪</span>
-            <span class="profile-name">Post-Viral Visual Impairment</span>
-            <span class="profile-status">(inactive)</span>
-          </button>
-        </div>
-        
-        <small style="font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px;">
-          Only the Low Vision profile is active. Other profiles will be available soon.
-        </small>
-      </div>
-    </div>
+    <h2>🧠 AdaptiveUI</h2>
 
     <!-- Main Extension View -->
-    <div id="mainView" class="card stack" style="display: none;">
-      <div class="row" style="margin-bottom: 8px;">
-        <button id="btnBackToProfiles" class="secondary" style="width: auto; padding: 6px 12px; font-size: 12px;">
-          ← Go Back to Profiles
-        </button>
-      </div>
-      
+    <div id="mainView" class="card stack">
       <div class="row">
         <button id="btnScan">🔍 Scan Page for Contrast</button>
         <button id="btnReset" class="secondary" style="display: none;">🔄 Reset All Changes</button>
@@ -314,6 +189,19 @@
         </label>
         <small style="font-size: 11px; color: var(--muted);">
           Auto-correct will fix contrast issues automatically and preserve brand colors
+        </small>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <div class="section-title">Inspector</div>
+        <label class="toggle">
+          <input type="checkbox" id="hoverDetails" />
+          Show Color Details on Hover
+        </label>
+        <small style="font-size: 11px; color: var(--muted);">
+          When on, hovering any text on the page shows its background colour, and if it was corrected, the original colour it changed from
         </small>
       </div>
 

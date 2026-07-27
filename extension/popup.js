@@ -1,12 +1,6 @@
 // --------------------------------------------------------------------------
-// AI Contrast Assistant - Popup Controller (Updated)
+// AdaptiveUI - Popup Controller
 // --------------------------------------------------------------------------
-
-// Profile Selection Elements
-const profileSelectionView = document.getElementById("profileSelectionView");
-const mainView = document.getElementById("mainView");
-const btnBackToProfiles = document.getElementById("btnBackToProfiles");
-const profileItems = document.querySelectorAll(".profile-item");
 
 // Main Extension Elements
 const btnScan = document.getElementById("btnScan");
@@ -14,136 +8,14 @@ const btnReset = document.getElementById("btnReset");
 const comfortSlider = document.getElementById("comfortScale");
 const comfortValue = document.getElementById("comfortValue");
 const autoCorrectToggle = document.getElementById("autoCorrect");
+const hoverDetailsToggle = document.getElementById("hoverDetails");
 const status = document.getElementById("status");
 const feedbackStatus = document.getElementById("feedbackStatus");
 const loadingOverlay = document.getElementById("loadingOverlay");
 
-// Profile Management
-const PROFILE_STORAGE_KEY = "userProfile";
-
 // Content Script Detection Constants
 const CONTENT_SCRIPT_PING_DELAY_MS = 200;
 const CONTENT_SCRIPT_MAX_RETRIES = 5;
-
-// --------------------------------------------------------------------------
-// PROFILE SELECTION LOGIC
-// --------------------------------------------------------------------------
-
-async function initializeProfileView() {
-  try {
-    const result = await chrome.storage.local.get([PROFILE_STORAGE_KEY]);
-    const selectedProfile = result[PROFILE_STORAGE_KEY];
-    if (selectedProfile) {
-      showMainView();
-    } else {
-      showProfileSelection();
-    }
-  } catch (error) {
-    console.error("Error checking profile:", error);
-    showProfileSelection();
-  }
-}
-
-function showProfileSelection() {
-  profileSelectionView.style.display = "block";
-  mainView.style.display = "none";
-  profileSelectionView.classList.add("view-visible");
-  mainView.classList.remove("view-visible");
-  mainView.classList.add("view-hidden");
-}
-
-function showMainView() {
-  profileSelectionView.style.display = "none";
-  mainView.style.display = "block";
-  profileSelectionView.classList.remove("view-visible");
-  profileSelectionView.classList.add("view-hidden");
-  mainView.classList.remove("view-hidden");
-  mainView.classList.add("view-visible");
-  // The content script will be injected on-demand by user actions (scan/reset).
-  // Set a ready status by default.
-  status.textContent = "✅ Ready to scan";
-  status.style.color = "#10b981";
-}
-
-// --------------------------------------------------------------------------
-// PROFILE SELECTION
-// --------------------------------------------------------------------------
-
-async function selectProfile(profileId) {
-  console.log("[HOVER] Profile selected:", profileId);
-  if (profileId === "low_vision") {
-    try {
-      await chrome.storage.local.set({ [PROFILE_STORAGE_KEY]: profileId });
-      console.log("Profile selected:", profileId);
-      showMainView();
-    } catch (error) {
-      console.error("[UI] Error saving profile:", error);
-      console.error("[UI] Stack trace:", error.stack);
-      console.error("Error saving profile:", error);
-    }
-  } else {
-    console.log("Profile not yet available:", profileId);
-  }
-}
-
-async function goBackToProfiles() {
-  try {
-    await chrome.storage.local.remove([PROFILE_STORAGE_KEY]);
-    console.log("Profile selection cleared");
-    showProfileSelection();
-  } catch (error) {
-    console.error("Error clearing profile:", error);
-    showProfileSelection();
-  }
-}
-
-if (profileItems && profileItems.length > 0) {
-  profileItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      if (!item.disabled) {
-        const profileId = item.getAttribute("data-profile");
-        selectProfile(profileId);
-      }
-    });
-  });
-}
-
-if (btnBackToProfiles) {
-  btnBackToProfiles.addEventListener("click", goBackToProfiles);
-}
-
-// --------------------------------------------------------------------------
-// COMFORT SCALE DISPLAY
-// --------------------------------------------------------------------------
-
-comfortSlider.addEventListener("input", () => {
-  const value = parseFloat(comfortSlider.value);
-  comfortValue.textContent = value.toFixed(1);
-  // Improved progressive function for better visual variation across comfort scale
-  // Lower scales (0.1-0.3): Much lighter, more readable colors (3.5-4.5:1) - minimal darkening
-  // Medium scales (0.4-0.6): Moderate colors (5.0-7.0:1) - balanced adjustment
-  // High scales (0.7-0.9): Strong contrast (8.0-10.0:1) - more aggressive darkening
-  // Maximum (1.0): Maximum contrast (11.0:1) - darkest colors
-  // This ensures visible differences in text appearance across scale levels
-  let target;
-  if (value <= 0.3) {
-    // Low sensitivity: Minimal darkening, preserve brand colors
-    target = 3.5 + value * 3.33;
-  } else if (value <= 0.6) {
-    // Medium sensitivity: Balanced adjustment
-    target = 3.0 + value * 6.67;
-  } else if (value <= 0.9) {
-    // High sensitivity: Strong contrast
-    target = 2.0 + value * 8.89;
-  } else {
-    // Maximum sensitivity: Darkest colors for maximum contrast
-    target = 11.0;
-  }
-  const targetDisplay = document.getElementById("targetContrast");
-  if (targetDisplay) {
-    targetDisplay.textContent = `Target: ${target.toFixed(2)}:1`;
-  }
-});
 
 /**
  * A promise-based function to ensure the content script is ready.
@@ -269,12 +141,25 @@ btnScan.addEventListener("click", async () => {
     // Step 1: Ensure the content script is ready before sending the command.
     await ensureContentScriptReady();
 
+    // A freshly-injected content script always starts with the inspector off,
+    // regardless of the user's saved preference - re-apply it now that the
+    // script (which may have just been injected for the first time on this
+    // page) is confirmed present.
+    try {
+      const { [INSPECTOR_STORAGE_KEY]: hoverDetailsEnabled } = await chrome.storage.local.get([INSPECTOR_STORAGE_KEY]);
+      if (hoverDetailsEnabled === true) {
+        syncInspectorToActiveTab(true);
+      }
+    } catch (e) {
+      // Non-critical - inspector state can be re-synced next popup open
+    }
+
     // Step 2: Get the active tab and send the runScan message.
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
-    
+
     // Send message to show toast with scanning state (user-friendly message)
     chrome.tabs.sendMessage(
       tab.id,
@@ -619,11 +504,72 @@ autoCorrectToggle.addEventListener("change", () => {
 });
 
 // --------------------------------------------------------------------------
+// INSPECTOR (hover to see original/corrected colour details)
+// --------------------------------------------------------------------------
+
+const INSPECTOR_STORAGE_KEY = "hoverDetailsEnabled";
+
+/**
+ * Send the current toggle state to the content script for the active tab.
+ * Silently ignores failures (e.g. no content script on this page yet, or a
+ * restricted chrome:// page) - the state will simply apply next time the
+ * user runs a scan or reopens the popup on a page that has it injected.
+ */
+function syncInspectorToActiveTab(enabled) {
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    if (!tab) return;
+    chrome.tabs.sendMessage(
+      tab.id,
+      { action: enabled ? "enableInspector" : "disableInspector" },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.log("[POPUP] Inspector sync skipped:", chrome.runtime.lastError.message);
+        }
+      }
+    );
+  });
+}
+
+async function loadInspectorSetting() {
+  try {
+    const result = await chrome.storage.local.get([INSPECTOR_STORAGE_KEY]);
+    const enabled = result[INSPECTOR_STORAGE_KEY] === true;
+    if (hoverDetailsToggle) {
+      hoverDetailsToggle.checked = enabled;
+    }
+    // Re-apply to whatever page is currently active, in case its content
+    // script is already injected (e.g. popup reopened after a previous scan).
+    syncInspectorToActiveTab(enabled);
+  } catch (error) {
+    console.error("[POPUP] Error loading inspector setting:", error);
+  }
+}
+
+hoverDetailsToggle.addEventListener("change", async () => {
+  const enabled = hoverDetailsToggle.checked;
+  try {
+    await chrome.storage.local.set({ [INSPECTOR_STORAGE_KEY]: enabled });
+  } catch (error) {
+    console.error("[POPUP] Error saving inspector setting:", error);
+  }
+
+  try {
+    await ensureContentScriptReady();
+  } catch (error) {
+    // No content script possible on this page (e.g. chrome:// page) - nothing to sync
+    console.log("[POPUP] Could not prepare content script for inspector toggle:", error.message);
+    return;
+  }
+  syncInspectorToActiveTab(enabled);
+});
+
+// --------------------------------------------------------------------------
 // INITIALIZATION
 // --------------------------------------------------------------------------
 
 window.addEventListener("DOMContentLoaded", async () => {
-  await initializeProfileView();
-  // Load saved settings after profile view is initialized
+  status.textContent = "✅ Ready to scan";
+  status.style.color = "#10b981";
   await loadSettings();
+  await loadInspectorSetting();
 });
